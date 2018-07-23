@@ -15,9 +15,9 @@ using System;
 using System.Collections.Generic;
 using System.Web;
 
-namespace Sitecore.Pipelines.HttpRequest
+namespace Sitecore.Support.Pipelines.HttpRequest
 {
-  public class ExecuteRequest : HttpRequestProcessor
+  public class ExecuteRequest : Sitecore.Pipelines.HttpRequest.ExecuteRequest
   {
     public override void Process(HttpRequestArgs args)
     {
@@ -29,6 +29,10 @@ namespace Sitecore.Pipelines.HttpRequest
       }
       else
       {
+        if (Context.PageMode.IsPreview && args.PermissionDenied)
+        {
+          HandleItemNotFound(args);
+        }
         PageContext page = Context.Page;
         Assert.IsNotNull(page, "No page context in processor.");
         string filePath = page.FilePath;
@@ -38,7 +42,8 @@ namespace Sitecore.Pipelines.HttpRequest
           {
             args.Context.Response.Redirect(filePath, true);
           }
-          else if (string.Compare(filePath, HttpContext.Current.Request.Url.LocalPath, StringComparison.InvariantCultureIgnoreCase) != 0)
+          else if (string.Compare(filePath, HttpContext.Current.Request.Url.LocalPath,
+                     StringComparison.InvariantCultureIgnoreCase) != 0)
           {
             args.Context.RewritePath(filePath, args.Context.Request.PathInfo, args.Url.QueryString, false);
           }
@@ -51,51 +56,6 @@ namespace Sitecore.Pipelines.HttpRequest
         {
           HandleLayoutNotFound(args);
         }
-      }
-    }
-
-    protected virtual void RedirectToLoginPage(string url)
-    {
-      UrlString urlString = new UrlString(url);
-      if (string.IsNullOrEmpty(urlString["returnUrl"]))
-      {
-        urlString["returnUrl"] = WebUtil.GetRawUrl();
-        urlString.Parameters.Remove("item");
-        urlString.Parameters.Remove("user");
-        urlString.Parameters.Remove("site");
-      }
-      WebUtil.Redirect(urlString.ToString(), false);
-    }
-
-    protected virtual void RedirectOnItemNotFound(string url)
-    {
-      PerformRedirect(url);
-    }
-
-    protected virtual void RedirectOnNoAccess(string url)
-    {
-      PerformRedirect(url);
-    }
-
-    protected virtual void RedirectOnSiteAccessDenied(string url)
-    {
-      PerformRedirect(url);
-    }
-
-    protected virtual void RedirectOnLayoutNotFound(string url)
-    {
-      PerformRedirect(url);
-    }
-
-    protected virtual void PerformRedirect(string url)
-    {
-      if (Settings.RequestErrors.UseServerSideRedirect)
-      {
-        HttpContext.Current.Server.Transfer(url);
-      }
-      else
-      {
-        WebUtil.Redirect(url, false);
       }
     }
 
